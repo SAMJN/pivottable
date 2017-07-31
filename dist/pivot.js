@@ -20,7 +20,7 @@
     /*
     Utilities
      */
-    var PivotData, addSeparators, aggregatorTemplates, aggregators, dayNamesEn, derivers, getSort, locales, mthNamesEn, naturalSort, numberFormat, pivotTableRenderer, rd, renderers, rx, rz, sortAs, usFmt, usFmtInt, usFmtPct, zeroPad;
+    var PivotData, addSeparators, addseparatorsNegative, aggregatorTemplates, aggregators, dayNamesEn, derivers, getSort, locales, mthNamesEn, naturalSort, numberFormat, negativeFormat, pivotTableRenderer, rd, renderers, rx, rz, sortAs, usFmt, usFmtInt, usFmtPct, zeroPad, usFmtNeg;
     addSeparators = function(nStr, thousandsSep, decimalSep) {
       var rgx, x, x1, x2;
       nStr += '';
@@ -32,6 +32,34 @@
         x1 = x1.replace(rgx, '$1' + thousandsSep + '$2');
       }
       return x1 + x2;
+    };
+    addseparatorsNegative = function (nStr, thousandsSep, decimalSep) {
+      var rgx, x, x1, x2, x3;
+      x1 = nStr;
+      if (x1 < 0) {
+        nStr += '';
+        x = nStr.split('.');
+        x1 = x[0];
+        x2 = x.length > 1 ? decimalSep + x[1] : '';
+        rgx = /(\d+)(\d{3})/;
+        while (rgx.test(x1)) {
+          x1 = x1.replace(rgx, '$1' + thousandsSep + '$2');
+        }
+        x1 = x1.replace('-', '');
+        x3 = x1 + x2;
+        x3 = '(' + x3 + ')';
+        return x3;
+      } else {
+        nStr += '';
+        x = nStr.split('.');
+        x1 = x[0];
+        x2 = x.length > 1 ? decimalSep + x[1] : '';
+        rgx = /(\d+)(\d{3})/;
+        while (rgx.test(x1)) {
+          x1 = x1.replace(rgx, '$1' + thousandsSep + '$2');
+        }
+        return x1 + x2;
+      }
     };
     numberFormat = function(opts) {
       var defaults;
@@ -57,6 +85,31 @@
         return "" + opts.prefix + result + opts.suffix;
       };
     };
+    negativeFormat = function (opts) {
+      var defaults;
+      defaults = {
+        digitsAfterDecimal: 2,
+        scaler: 1,
+        thousandsSep: ',',
+        decimalSep: '.',
+        prefix: '',
+        suffix: '',
+        showZero: false
+      };
+      opts = $.extend(defaults, opts);
+      return function (x) {
+        var result;
+        if (isNaN(x) || !isFinite(x)) {
+          return '';
+        }
+        if (x === 0 && !opts.showZero) {
+          return '';
+        }
+        result = addseparatorsNegative(x.toFixed(opts.digitsAfterDecimal), opts.thousandsSep, opts.decimalSep);
+        return '' + opts.prefix + result + opts.suffix;
+      };
+    };
+    usFmtNeg = negativeFormat();
     usFmt = numberFormat();
     usFmtInt = numberFormat({
       digitsAfterDecimal: 0
@@ -423,7 +476,8 @@
         "Sum as Fraction of Columns": tpl.fractionOf(tpl.sum(), "col", usFmtPct),
         "Count as Fraction of Total": tpl.fractionOf(tpl.count(), "total", usFmtPct),
         "Count as Fraction of Rows": tpl.fractionOf(tpl.count(), "row", usFmtPct),
-        "Count as Fraction of Columns": tpl.fractionOf(tpl.count(), "col", usFmtPct)
+        "Count as Fraction of Columns": tpl.fractionOf(tpl.count(), "col", usFmtPct),
+        "Negative Formatting Sum": tpl.sum(usFmtNeg),
       };
     })(aggregatorTemplates);
     renderers = {
